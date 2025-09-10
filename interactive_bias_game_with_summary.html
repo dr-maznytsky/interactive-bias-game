@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Психологія вибору в медіапромоції — інтерактив (responsive)</title>
+    <!-- pdfMake with Cyrillic fonts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); color: white; padding: 30px; text-align: center; }
+        .header h1 { font-size: 2.0em; margin-bottom: 10px; }
+        .progress-bar { background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; margin-top: 20px; overflow: hidden; }
+        .progress-fill { background: #e74c3c; height: 100%; border-radius: 4px; transition: width 0.3s ease; width: 0%; }
+        .main-content { padding: 22px; }
+        .step { display: none; }
+        .step.active { display: block; }
+
+        /* Flashcard: absolute faces + autosize via JS */
+        .flashcard {
+          position: relative;
+          padding: 0;
+          border: 2px solid #dee2e6;
+          border-radius: 15px;
+          overflow: hidden;
+          min-height: 160px;
+          background: transparent;
+        }
+        .flashcard:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+
+        .card-face {
+          position: absolute;
+          inset: 0;
+          padding: 24px;
+          border-radius: 15px;
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+          transition: transform 0.6s;
+          color: white;
+        }
+        .front { background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%); transform: rotateY(0deg); }
+        .back  { background: linear-gradient(135deg, #55a3ff 0%, #003d82 100%); transform: rotateY(180deg); }
+        .flashcard.flipped .front { transform: rotateY(180deg); }
+        .flashcard.flipped .back  { transform: rotateY(0deg); }
+        .card-face > *:last-child { margin-bottom: 0; }
+
+        .media-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 14px 0; }
+        .media-card { background: white; border: 2px solid #e9ecef; border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.2s ease; }
+        .media-card:hover { border-color: #3498db; transform: translateY(-2px); }
+        .media-card.selected { border-color: #e74c3c; background: #fff5f5; }
+
+        .analysis-table { width: 100%; border-collapse: collapse; margin: 12px 0; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.06); }
+        .analysis-table th, .analysis-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e9ecef; }
+        .analysis-table th { background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); color: white; font-weight: 600; }
+        .analysis-table textarea { width: 100%; min-height: 90px; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; font-family: inherit; resize: vertical; }
+
+        .btn { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; border: none; padding: 10px 18px; border-radius: 25px; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.2s ease; margin: 8px 4px; }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3); }
+        .btn-secondary { background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%); }
+        .navigation { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e9ecef; }
+        .step-info { background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; padding: 10px 14px; border-radius: 10px; margin-bottom: 10px; text-align: center; font-weight: 600; }
+        .examples { background: #f8f9fa; border-left: 4px solid #3498db; padding: 12px; margin: 12px 0; border-radius: 0 10px 10px 0; }
+        .examples h4 { color: #2c3e50; margin-bottom: 8px; }
+        .examples li { margin: 6px 0; padding: 6px; background: white; border-radius: 6px; border-left: 3px solid #3498db; list-style: none; }
+        .detailed-analysis { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 15px; padding: 16px; margin: 12px 0; }
+        .tactics-list { background: white; border-radius: 10px; padding: 12px; margin: 8px 0; }
+        .tactics-list input, .tactics-list textarea, select { width: 100%; padding: 10px; margin: 6px 0; border: 1px solid #dee2e6; border-radius: 6px; }
+        .save-section { background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); color: white; padding: 16px; border-radius: 15px; text-align: center; margin: 12px 0; }
+
+        /* Selection summary (flexible reminder) */
+        .selection-summary {
+          border: 2px solid #e9ecef;
+          border-radius: 12px;
+          padding: 12px;
+          margin: 10px 0 14px;
+          background: #f8fbff;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+        }
+        .selection-summary .selection-title{
+          font-weight: 700;
+          margin-bottom: 6px;
+          color: #2c3e50;
+        }
+        .selection-summary .selection-body{
+          line-height: 1.5;
+          margin-bottom: 8px;
+        }
+        .selection-summary .selection-actions{
+          display: flex; gap: 8px; flex-wrap: wrap;
+        }
+
+        /* Responsive stacking for analysis tables on mobile */
+        @media (max-width: 768px) {
+          .analysis-table thead { display: none; }
+          .analysis-table, .analysis-table tbody, .analysis-table tr, .analysis-table td { display: block; width: 100%; }
+          .analysis-table tr {
+            margin-bottom: 16px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 10px;
+            background: #f9f9f9;
+          }
+          .analysis-table td { margin-bottom: 12px; }
+          .analysis-table td:before {
+            content: attr(data-label);
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #2c3e50;
+          }
+        }
+		/* Глобально: забороняємо контекстне меню/long-press callout і виділення тексту,
+   щоб не можна було копіювати завдання. */
+html, body {
+  -webkit-touch-callout: none;   /* iOS/Android: прибирає системне меню (Copy/Paste) */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Дозволяємо виділення ТІЛЬКИ у полях вводу, щоб люди могли нормально редагувати текст */
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: none;   /* лишаємо без Paste-баблу на iOS */
+}
+
+/* Якщо є зони, де все ж треба дозволити копіювання, обгорни їх .can-copy */
+.can-copy {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default !important;
+}
+/* Повідомлення при спробі вставки */
+.anti-paste-toast{
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  transform: translate(-50%, 20px);
+  background: rgba(28, 34, 40, .95);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2);
+  font-size: 14px;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease;
+}
+.anti-paste-toast.show{
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+    </style>
+</head>
+<body>
+<script>
+// ==== Глобальне блокування вставки + toast ====
+(function () {
+  let toastEl, toastTimer;
+  function showToast(msg = 'Вставлення з буфера вимкнено'){
+    if(!toastEl){
+      toastEl = document.createElement('div');
+      toastEl.className = 'anti-paste-toast';
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
+  }
+
+  const block = (e, msg) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showToast(msg || 'Вставлення з буфера вимкнено');
+    return false;
+  };
+
+  // 1) Будь-яка паста (desktop/mobile)
+  document.addEventListener('paste', (e) => block(e), true);
+
+  // 2) Safari/iOS/Android: beforeinput з типами paste/drop
+  document.addEventListener('beforeinput', (e) => {
+    const t = e.inputType || '';
+    if (t === 'insertFromPaste' || t === 'insertFromPasteAsQuotation' || t === 'insertFromDrop') {
+      block(e);
+    }
+  }, true);
+
+  // 3) Drag&drop як обхід пасти
+  document.addEventListener('drop', (e) => block(e), true);
+
+  // 4) Контекстне меню (ПК і long-press)
+  document.addEventListener('contextmenu', (e) => block(e, 'Контекстне меню вимкнено'), true);
+
+  // 5) Гарячі клавіші (Ctrl/⌘+V, Shift+Insert)
+  document.addEventListener('keydown', (e) => {
+    const k = (e.key || '').toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && (k === 'v' || k === 'insert')) { block(e); }
+    if (e.shiftKey && k === 'insert') { block(e); }
+  }, true);
+})();
+</script>
+
+
+    <div class="container">
+        <div class="header">
+            <h1>Психологія вибору в медіапромоції</h1>
+            <p>Інтерактивне навчання когнітивних упереджень</p>
+            <div class="progress-bar"><div class="progress-fill" id="progressBar"></div></div>
+        </div>
+
+        <div class="main-content">
+            <!-- step0: Intro -->
+            <div class="step active" id="step0">
+                <div class="step-info">Ласкаво просимо! Інтерактивне групове навчання когнітивних упереджень</div>
+                <h2>Як працює ця гра?</h2>
+                <p style="font-size: 16px; line-height: 1.6; margin: 14px 0;">
+                    Ви пройдете через опис 5 когнітивних упереджень, кожне з яких має 3 підкроки: теорія → вибір медіапродукту → аналіз.
+                </p>
+                <ul style="font-size: 15px; line-height: 1.8; margin-left: 24px;">
+                    <li><strong>Теорія</strong> — інтерактивна флешкартка з поясненням</li>
+                    <li><strong>Практика</strong> — вибір медіапродукту для аналізу</li>
+                    <li><strong>Аналіз</strong> — заповнення таблиці з прикладами</li>
+                </ul>
+                <p style="margin: 14px 0; font-size: 15px;">В кінці ви маєте зберегти результати роботи групи у форматі PDF.</p>
+                <div style="margin: 16px 0;">
+                    <label for="groupName" style="display:block;margin-bottom:8px;font-weight:600;">Назва вашої групи, введіть прізвища учасників(-ць):</label>
+                    <input type="text" id="groupName" placeholder="Наприклад: Група 3" style="padding:10px;border:1px solid #ddd;border-radius:6px;font-size:15px;width:300px;">
+                </div>
+            </div>
+
+            <!-- step1: Confirmation Bias (theory) -->
+            <div class="step" id="step1">
+                <div class="step-info">Упередження 1/5: Confirmation Bias (Упередження підтвердження)</div>
+                <div class="flashcard" onclick="flipCard(this)">
+                    <div class="card-face front">
+                        <h3>Упередження підтвердження</h3>
+                        <p style="font-size: 16px; margin-top: 12px;">Схильність шукати та інтерпретувати інформацію так, щоб вона підтверджувала наші переконання. Натисніть, щоб дізнатися більше…</p>
+                    </div>
+                    <div class="card-face back">
+                        <h3>Упередження підтвердження</h3>
+                        <p><strong>Визначення:</strong> Нейрологічний механізм: Коли ми отримуємо інформацію, що підтверджує наші переконання, активується система винагороди мозку (дофамінові шляхи), що створює приємні відчуття. Натомість суперечлива інформація активує зони стресу та дискомфорту. </p>
+                        <p style="margin-top: 10px;"><strong>Життєвий приклад:</strong> Ви вважаєте викладача суворим і помічаєте всі його погані оцінки, але ігноруєте хороші.</p>
+                    </div>
+                </div>
+                <div class="examples">
+                    <h4>Приклади використання в медіа:</h4>
+                    <ul>
+                        <li>TikTok "For You Page"
+Якщо ви подивилися кілька відео про фітнес, алгоритм почне показувати вам більше контенту про тренування, дієти, спортзал. Ви почнете думати, що всі навколо займаються спортом, хоча насправді алгоритм просто підтверджує ваш інтерес.</li>
+                        <li>Новинні заголовки
+
+"Як ми і передбачали: молодь знову обирає TikTok замість книг"
+"Ще один доказ того, що дистанційне навчання не працює"
+"Студенти підтверджують: кава справді покращує концентрацію"</li>
+                        <li>YouTube рекомендації
+Коли ви дивитеся відео про певного блогера чи тему (наприклад, ігри або красу), YouTube пропонує схожий контент. Якщо ви прихильник якоїсь команди у кіберспорті, вам показуватимуть більше відео про її перемоги, а не поразки.</li>
+                        <li>Новинні групи публікують контент, що резонує з поглядами аудиторії</li>
+						<li>Instagram Stories
+Якщо ви часто дивитеся сторіз про моду, Instagram показуватиме вам більше реклами одягу та beauty-контенту. Ви думаєте, що це популярно серед всіх, але насправді це персоналізовано під вас.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- step1b: Confirmation Bias (choose media) -->
+            <div class="step" id="step1b">
+                <div class="step-info">Оберіть медіапродукт для аналізу Confirmation Bias</div>
+                <div class="media-cards" id="mediaCards1">
+                    <div class="media-card" onclick="selectMedia(this, 'confirmation')">
+                        <h4>YouTube-канал «Гроші для студентів»</h4>
+                        <p><strong>Продукт:</strong> Освітній контент про фінансову грамотність</p>
+                        <p><strong>Аудиторія:</strong> Студенти 18–25 років, обмежений бюджет</p>
+                    </div>
+                    <div class="media-card" onclick="selectMedia(this, 'confirmation')">
+                        <h4>Телеграм-канал «КриптоНовини»</h4>
+                        <p><strong>Продукт:</strong> Новини криптовалют, торгові сигнали</p>
+                        <p><strong>Аудиторія:</strong> Чоловіки 20–35 років, технічно підковані</p>
+                    </div>
+                    <div class="media-card" onclick="selectMedia(this, 'confirmation')">
+                        <h4>Instagram-блог «StudentLife»</h4>
+                        <p><strong>Продукт:</strong> Контент про студентське життя, мотивація</p>
+                        <p><strong>Аудиторія:</strong> Студенти 17–22 роки, активні в соцмережах</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- step1c: Confirmation Bias (analysis) -->
+            <div class="step" id="step1c">
+                <div class="step-info">Аналіз Confirmation Bias для вашого медіапродукту</div>
+                <table class="analysis-table">
+                    <thead><tr><th>Як проявляється у аудиторії</th><th>Промо-стратегія</th><th>Конкретний приклад</th></tr></thead>
+                    <tbody><tr>
+                        <td data-label="Як проявляється у аудиторії"><textarea id="manifestation1" placeholder="Приклад роботи групи з новинним порталом. Прояв: Читачі шукають новини, що підтверджують їхні політичні погляди"></textarea></td>
+                        <td data-label="Промо-стратегія"><textarea id="strategy1" placeholder="Приклад роботи групи з новинним порталом. Стратегія: Персоналізація стрічки новин з урахуванням попередніх вподобань"></textarea></td>
+                        <td data-label="Конкретний приклад"><textarea id="example1" placeholder="Приклад роботи групи з новинним порталом. Конкретний приклад: алгоритм показує більше матеріалів про успіхи партії, за яку користувач голосував"></textarea></td>
+                    </tr></tbody>
+                </table>
+            </div>
+
+            <!-- step2: Anchoring Bias (theory) -->
+            <div class="step" id="step2">
+                <div class="step-info">Упередження 2/5: Anchoring Bias (Ефект прив’язки)</div>
+                <div class="flashcard" onclick="flipCard(this)">
+                    <div class="card-face front">
+                        <h3>Anchoring Bias</h3>
+                        <p style="font-size: 16px; margin-top: 12px;"> Схильність надмірно покладатися на першу отриману інформацію (anchor - якір) при прийнятті подальших рішень. Натисніть, щоб дізнатися більше…</p>
+                    </div>
+                    <div class="card-face back">
+                        <h3>Ефект прив’язки</h3>
+                        <p><strong>Визначення:</strong> Надмірна залежність від першої отриманої інформації при прийнятті рішень.</p>
+                        <p style="margin-top: 10px;"><strong>Життєвий приклад:</strong> Простий життєвий приклад:
+Коли ви приходите на ринок купити джинси, продавець каже: "Ці коштують 3000 гривень, але сьогодні знижка - 1800". Навіть якщо ви знаєте, що це звичайна ціна, цифра "3000" застрягає у голові як "якір". Тепер 1800 здається вигідною покупкою, хоча насправді ви могли б знайти такі самі джинси за 1200 в іншому місці.</p>
+<p> Або інший приклад: якщо хтось запитає вас "Чи думаєте ви, що Києву більше чи менше 2000 років?", а потім "Скільки років Києву?", ваша відповідь буде близькою до 2000, навіть якщо цифра була випадковою. Мозок використовує 2000 як стартову точку і коригує від неї.</p>
+<p> <strong>Психологічний механізм:</strong> Мозок використовує першу інформацію як точку відліку і недостатньо коригує судження на основі подальших даних. Це відбувається навіть тоді, коли початкова інформація очевидно нерелевантна.</p>
+                    </div>
+                </div>
+                <div class="examples">
+                    <h4>Приклади використання в медіа:</h4>
+                    <ul>
+                        <li>
+Netflix показує спочатку преміум план за 299 грн/місяць, а потім базовий за 149 грн. Користувач думає, що 149 грн - це вигідно, порівнюючи з "якорем" 299 грн.</li>
+                        <li>« Статистика у матеріалах. YouTube-канал про освіту починає відео з фрази: "В середньому людина витрачає 7 років життя на навчання, але 90% цього часу - марно". Цифра "7 років" стає якорем для сприйняття всієї наступної інформації.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- step2b: Anchoring Bias (choose media) -->
+            <div class="step" id="step2b">
+                <div class="step-info">Оберіть медіапродукт для аналізу Anchoring Bias</div>
+                <div class="media-cards">
+                    <div class="media-card" onclick="selectMedia(this, 'anchoring')">
+                        <h4>Сторінка тарифів EdTech-платформи</h4>
+                        <p><strong>Продукт:</strong> Освітня підписка з 3 планами</p>
+                        <p><strong>Аудиторія:</strong> Студенти та молоді спеціалісти</p>
+                    </div>
+                    <div class="media-card" onclick="selectMedia(this, 'anchoring')">
+                        <h4>Лендінг фінансового сервісу</h4>
+                        <p><strong>Продукт:</strong> Преміум-рахунок з «від» ціною</p>
+                        <p><strong>Аудиторія:</strong> Фінансово активні користувачі</p>
+                    </div>
+                    <div class="media-card" onclick="selectMedia(this, 'anchoring')">
+                        <h4>Маркетплейс з акціями</h4>
+                        <p><strong>Продукт:</strong> Товари зі знижками 40–70%</p>
+                        <p><strong>Аудиторія:</strong> Широка, орієнтація на вигоду</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- step2c: Anchoring Bias (analysis) -->
+            <div class="step" id="step2c">
+                <div class="step-info">Аналіз Anchoring Bias для вашого медіапродукту</div>
+                <table class="analysis-table">
+                    <thead><tr><th>Як проявляється у аудиторії</th><th>Промо-стратегія</th><th>Конкретний приклад</th></tr></thead>
+                    <tbody><tr>
+                         <td data-label="Як проявляється у аудиторії"><textarea id="manifestation2" placeholder="Приклад роботи групи з новинним порталом. Прояв: перша цифра в заголовку впливає на сприйняття важливості новини"></textarea></td>
+                        <td data-label="Промо-стратегія"><textarea id="strategy2" placeholder="Приклад роботи групи з новинним порталом. Стратегія: використання вражаючої статистики на початку матеріалу"></textarea></td>
+                        <td data-label="Конкретний приклад"><textarea id="example2" placeholder="Приклад роботи групи з новинним порталом. Конкретний приклад: 89% експертів вважають - нова реформа змінить все"></textarea></td>
+                    </tr></tbody>
+                </table>
+            </div>
+
+            <!-- step3: Social Proof (theory) -->
+            <div class="step" id="step3">
+                <div class="step-info">Упередження 3/5: Social Proof (Соціальний доказ)</div>
+                <div class="flashcard" onclick="flipCard(this)">
+                    <div class="card-face front">
+                        <h3>Social Proof</h3>
+                        <p style="font-size: 16px; margin-top: 12px;">Психологічний феномен, коли люди визначають правильність поведінки, спостерігаючи за поведінкою інших, особливо в невизначених ситуаціях. Натисніть, щоб дізнатися більше…</p>
+                    </div>
+                    <div class="card-face back">
+                        <h3>Соціальний доказ</h3>
+                        <p><strong>Визначення:</strong> Визначення правильності поведінки через спостереження за іншими (більшістю).</p>
+                        <p style="margin-top: 10px;"><strong>Життєвий приклад:</strong> Уявіть, що ви прийшли до нового кафе і не знаєте, де замовляти. Ви дивитеся, куди йдуть інші відвідувачі - до каси чи до столика, чекають офіціанта чи самообслуговування. Ви копіюєте поведінку інших, навіть не питаючи правила.
+Або інша ситуація: на лекції викладач ставить складне питання. Ніхто не піднімає руку. Навіть якщо ви знаєте відповідь, ви теж не підіймаєте руку, бо "всі мовчать - значить так треба". Якби хтось один підняв руку, інші б теж почали.
+Це працює навіть в онлайні: якщо пост має багато лайків, ви більш схильні його лайкнути. Якщо у відео мало переглядів, ви можете подумати "мабуть, воно не цікаве" і не дивитися.
+Еволюційна основа: У первісному суспільстві копіювання поведінки групи часто було питанням виживання. Якщо всі біжать, краще бігти разом з ними, навіть не знаючи причини.</p>
+                    </div>
+                </div>
+                <div class="examples">
+                    <h4>Приклади використання в медіа:</h4>
+                    <ul>
+                        <li>«Приклад 1: Метрики популярності.
+						"Це відео подивилися 2,5 млн разів" на YouTube
+"847 коментарів" під постом в Instagram
+"Trending #1" у TikTok
+Показники "кількість читачів зараз онлайн" у Telegram-каналах»</li>
+                        <li>Приклад 2: Соціальні докази в контенті
+
+"Понад 100 000 студентів уже використовують наші конспекти"
+"Найпопулярніший подкаст про кар'єру в Україні"
+"9 з 10 випускників рекомендують цей курс"</li>
+                        <li>Приклад 3: Live-показники
+
+"12 людей зараз читають цю статтю" на медіа-сайтах
+"Залишилося 3 місця на курс" в освітніх проектах
+"За останню годину підписалося 47 людей" у Telegram</li>					
+                    </ul>
+                </div>
+            </div>
+
+            <!-- step3b: Social Proof (choose media) -->
+            <div class="step" id="step3b">
+                <div class="step-info">Оберіть медіапродукт для аналізу Social Proof</div>
+                <div class="media-cards">
+                    <div class="media-card" onclick="selectMedia(this, 'social')">
+                        <h4>Сторінка курсу з відгуками</h4>
+                        <p><strong>Продукт:</strong> Онлайн-курс із зірочками та кейсами</p>
+                        <p><strong>Аудиторія:</strong> Студенти, кар’єрні змінювачі</p>
+                    </div>
+                    <div class="media-card" onclick="selectMedia(this, 'social')">
+                        <h4>Landing SaaS з логотипами клієнтів</h4>
+                        <p><strong>Продукт:</strong> ПЗ для команд, блок «Нам довіряють»</p>
+                        <p><strong>Аудиторія:</strong> B2B покупці</p>
+                    </div>
+                    <div class="media-card" onclick="selectMedia(this, 'social')">
+                        <h4>Магазин з лічильником «прямо зараз купують»</h4>
+                        <p><strong>Продукт:</strong> E-commerce, поп-апи активності</p>
+                        <p><strong>Аудиторія:</strong> Широка</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- step3c: Social Proof (analysis) -->
+            <div class="step" id="step3c">
+                <div class="step-info">Аналіз Social Proof для вашого медіапродукту</div>
+                <table class="analysis-table">
+                    <thead><tr><th>Як проявляється у аудиторії</th><th>Промо-стратегія</th><th>Конкретний приклад</th></tr></thead>
+                    <tbody><tr>
+                     <td data-label="Як проявляється у аудиторії"><textarea id="manifestation3" placeholder="Приклад роботи групи з новинним порталом. Прояв: Читачі звертають увагу на популярні матеріали"></textarea></td>
+                        <td data-label="Промо-стратегія"><textarea id="strategy3" placeholder="Приклад роботи групи з новинним порталом.  Показ метрик популярності та соціальної активності"></textarea></td>
+                        <td data-label="Конкретний приклад"><textarea id="example3" placeholder="Приклад роботи групи з новинним порталом. Конкретний приклад: стратегія - показ метрик популярності та соціальної активності. Топ-5 найчитаніших новин тижня, лічильники коментарів"></textarea></td>
+                    </tr></tbody>
+                </table>
+            </div>
+
+            <!-- step4: Loss Aversion (theory) -->
+            <div class="step" id="step4">
+                <div class="step-info">Упередження 4/5: Loss Aversion (Уникнення втрат)</div>
+                <div class="flashcard" onclick="flipCard(this)">
+                    <div class="card-face front">
+                        <h3>Loss Aversion</h3>
+                        <p style="font-size: 16px; margin-top: 12px;"><strong>Визначення:</strong> Психологічний принцип, згідно з яким біль від втрати чогось відчувається приблизно вдвічі сильніше, ніж задоволення від еквівалентного здобутку. Натисніть, щоб дізнатися більше…</p>
+                    </div>
+                    <div class="card-face back">
+                        <h3>Уникнення втрат</h3>
+                        <p> Біль від втрати відчувається вдвічі сильніше за задоволення від здобутку. Або з навчанням: втратити бали за пропущені заняття болючіше, ніж отримати такі самі бали за додаткові завдання приємно. Тому студенти часто більше переживають через мінуси, ніж радіють плюсам.</p>
+                        <p style="margin-top: 10px;"><strong>Життєвий приклад:</strong> Втратити 500 грн болючіше, ніж знайти 500 грн приємно. Фрази типу "Не пропустіть", "Остання можливість", "Що ви втрачаєте, не читаючи це". Підкреслення обмеженості часу або кількості (scarcity marketing). Фокус на проблемах, які виникнуть без споживання контенту</p>
+                    </div>
+                </div>
+                <div class="examples">
+                    <h4>Приклади використання в медіа:</h4>
+                    <ul>
+                        <li>«Акція закінчується завтра о 23:59»</li>
+                        <li>«Поки ви читаєте це, однокурсники вже вивчають нову професію»</li>
+                        <li>«Без цих знань ви програєте на співбесіді»</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- step4b: Loss Aversion (choose media) -->
+            <div class="step" id="step4b">
+                <div class="step-info">Оберіть медіапродукт для аналізу Loss Aversion</div>
+                <div class="media-cards">
+                    <div class="media-card" onclick="selectMedia(this, 'loss')">
+                        <h4>Лендінг із таймером</h4>
+                        <p><strong>Продукт:</strong> Курс зі знижкою, що «згорає»</p>
+                        <p><strong>Аудиторія:</strong> Ловці вигоди/дедлайнів</p>
+                    </div>
+                    <div class="media-card" onclick="selectMedia(this, 'loss')">
+                        <h4>Email-серія «не пропустіть…»</h4>
+                        <p><strong>Продукт:</strong> Нагадування про дедлайн</p>
+                        <p><strong>Аудиторія:</strong> Підписники</p>
+                    </div>
+                    <div class="media-card" onclick="selectMedia(this, 'loss')">
+                        <h4>Платформа вакансій</h4>
+                        <p><strong>Продукт:</strong> «Конкуренти заберуть місце мрії»</p>
+                        <p><strong>Аудиторія:</strong> Пошукачі роботи</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- step4c: Loss Aversion (analysis) -->
+            <div class="step" id="step4c">
+                <div class="step-info">Аналіз Loss Aversion для вашого медіапродукту</div>
+                <table class="analysis-table">
+                    <thead><tr><th>Як проявляється у аудиторії</th><th>Промо-стратегія</th><th>Конкретний приклад</th></tr></thead>
+                    <tbody><tr>
+                         <td data-label="Як проявляється у аудиторії"><textarea id="manifestation4" placeholder="Приклад роботи групи з новинним порталом. Прояв: страх пропустити важливу інформацію"></textarea></td>
+                        <td data-label="Промо-стратегія"><textarea id="strategy4" placeholder="Приклад роботи групи з новинним порталом. Стратегія: підкреслення унікальності та обмеженості доступу"></textarea></td>
+                        <td data-label="Конкретний приклад"><textarea id="example4" placeholder="Приклад роботи групи з новинним порталом. Конкретний приклад: алгоритм показує більше матеріалів про успіхи партії, за яку користувач голосував"></textarea></td>
+                    </tr></tbody>
+                </table>
+            </div>
+
+            <!-- step5: Availability Heuristic (theory) -->
+            <div class="step" id="step5">
+                <div class="step-info">Упередження 5/5: Availability Heuristic (Евристика доступності)</div>
+                <div class="flashcard" onclick="flipCard(this)">
+                    <div class="card-face front">
+                        <h3>Availability Heuristic</h3>
+                        <p style="font-size: 16px; margin-top: 12px;"><strong>Визначення:</strong> Схильність оцінювати ймовірність або важливість події на основі того, наскільки легко приходять на думку відповідні приклади.Натисніть, щоб дізнатися більше…</p>
+                    </div>
+                    <div class="card-face back">
+                        <h3>Евристика доступності</h3>
+                        <p><strong>Когнітивний механізм:</strong> Мозок інтерпретує легкість згадування як показник частоти або важливості події. Яскраві, емоційні або недавні події запам'ятовуються краще і здаються більш ймовірними.</p>
+                        <p style="margin-top: 10px;"><strong>Життєвий приклад:</strong> Після фільму про авіакатастрофу літати здається небезпечніше за авто.</p>
+                    </div>
+                </div>
+                <div class="examples">
+                    <h4>Приклади використання в медіа:</h4>
+                    <ul>
+                        <li>«Історія студента, який заробив мільйон на криптовалюті»</li>
+                        <li>«5 помилок, які знищили кар’єру молодих спеціалістів»</li>
+                        <li>Регулярні нагадування про дедлайни вступу</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- step5b: Availability Heuristic (choose media) -->
+            <div class="step" id="step5b">
+                <div class="step-info">Оберіть медіапродукт для аналізу Availability Heuristic</div>
+                <div class="media-cards">
+                    <div class="media-card" onclick="selectMedia(this, 'availability')">
+                        <h4>Новинний сайт з історіями успіху</h4>
+                        <p><strong>Продукт:</strong> Серія «успішних кейсів»</p>
+                        <p><strong>Аудиторія:</strong> Широка</p>
+                    </div>
+                    <div class="media-card" onclick="selectMedia(this, 'availability')">
+                        <h4>Блог кар’єрного коуча</h4>
+                        <p><strong>Продукт:</strong> Публікації «типові помилки»</p>
+                        <p><strong>Аудиторія:</strong> Студенти/джунам</p>
+                    </div>
+                    <div class="media-card" onclick="selectMedia(this, 'availability')">
+                        <h4>Освітній портал</h4>
+                        <p><strong>Продукт:</strong> Серія нагадувань про дедлайни</p>
+                        <p><strong>Аудиторія:</strong> Абітурієнти</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- step5c: Availability Heuristic (analysis) -->
+            <div class="step" id="step5c">
+                <div class="step-info">Аналіз Availability Heuristic для вашого медіапродукту</div>
+                <table class="analysis-table">
+                    <thead><tr><th>Як проявляється у аудиторії</th><th>Промо-стратегія</th><th>Конкретний приклад</th></tr></thead>
+                    <tbody><tr>
+                       <td data-label="Як проявляється у аудиторії"><textarea id="manifestation5" placeholder="Приклад роботи групи з новинним порталом. Прояв: Яскраві події здаються більш важливими та частими"></textarea></td>
+                        <td data-label="Промо-стратегія"><textarea id="strategy5" placeholder="Приклад роботи групи з новинним порталом. Стратегія: Фокус на драматичних та емоційних подіях"></textarea></td>
+                        <td data-label="Конкретний приклад"><textarea id="example5" placeholder="Детальне висвітлення резонансних випадків з яскравими фото та відео"></textarea></td>
+                    </tr></tbody>
+                </table>
+            </div>
+
+            <!-- Final step -->
+            <div class="step" id="stepFinal">
+                <div class="step-info">Фінальний аналіз та збереження результатів</div>
+                <h2>Детальна розробка обраної стратегії</h2>
+                <div class="detailed-analysis">
+                    <h3>Оберіть найефективніше упередження:</h3>
+                    <select id="chosenBias">
+                        <option value="">Оберіть упередження…</option>
+                        <option value="confirmation">Confirmation Bias</option>
+                        <option value="anchoring">Anchoring Bias</option>
+                        <option value="social">Social Proof</option>
+                        <option value="loss">Loss Aversion</option>
+                        <option value="availability">Availability Heuristic</option>
+                    </select>
+                    <div class="tactics-list">
+                        <h4>Назва кампанії:</h4>
+                        <input type="text" id="campaignName" placeholder="Наприклад: «Не залишайтеся позаду: тренди IT»">
+                        <h4>Конкретні тактики (3 пункти):</h4>
+                        <input type="text" id="tactic1" placeholder="Тактика 1">
+                        <input type="text" id="tactic2" placeholder="Тактика 2">
+                        <input type="text" id="tactic3" placeholder="Тактика 3">
+                        <h4>Психологічний механізм:</h4>
+                        <textarea id="mechanism" placeholder="Поясніть, чому це працює…"></textarea>
+                        <h4>Етичні обмеження:</h4>
+                        <textarea id="ethics" placeholder="Які етичні принципи потрібно дотримуватися…"></textarea>
+                        <h4>Очікувані результати:</h4>
+                        <textarea id="results" placeholder="Які результати ви очікуєте…"></textarea>
+                    </div>
+                </div>
+                <div class="save-section">
+                    <h3>Збереження результатів</h3>
+                    <p>Натисніть кнопку нижче, щоб зберегти аналіз вашої групи у форматі PDF</p>
+                    <button class="btn" onclick="generatePDF()" style="background:white;color:#27ae60;font-size:16px;padding:10px 18px;">📄 Зберегти результати в PDF</button>
+                </div>
+            </div>
+
+            <div class="navigation">
+                <button class="btn btn-secondary" id="prevBtn" onclick="previousStep()">← Попередній крок</button>
+                <span id="stepCounter">Крок 1 з 17</span>
+                <button class="btn" id="nextBtn" onclick="nextStep()">Наступний крок →</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const steps = ['step0','step1','step1b','step1c','step2','step2b','step2c','step3','step3b','step3c','step4','step4b','step4c','step5','step5b','step5c','stepFinal'];
+        let currentStepIndex = 0;
+        let selectedMedia = {};
+
+        function $(id){ return document.getElementById(id); }
+
+        function updateProgress(){
+            const total = steps.length;
+            const pct = ((currentStepIndex+1)/total)*100;
+            $('progressBar').style.width = pct + '%';
+            $('stepCounter').textContent = `Крок ${currentStepIndex+1} з ${total}`;
+            $('nextBtn').textContent = (currentStepIndex === total-1) ? 'Завершити' : 'Наступний крок →';
+            $('prevBtn').style.display = (currentStepIndex === 0) ? 'none' : 'inline-block';
+        }
+
+        const ANALYSIS_STEPS = {
+          step1c: { biasKey: 'confirmation', backStep: 'step1b', label: 'Confirmation Bias' },
+          step2c: { biasKey: 'anchoring',    backStep: 'step2b', label: 'Anchoring Bias' },
+          step3c: { biasKey: 'social',       backStep: 'step3b', label: 'Social Proof' },
+          step4c: { biasKey: 'loss',         backStep: 'step4b', label: 'Loss Aversion' },
+          step5c: { biasKey: 'availability', backStep: 'step5b', label: 'Availability Heuristic' },
+        };
+
+        function renderSelectionSummary(stepId){
+          const cfg = ANALYSIS_STEPS[stepId];
+          if(!cfg) return;
+          const stepEl = document.getElementById(stepId);
+          if(!stepEl) return;
+
+          let summary = stepEl.querySelector('.selection-summary');
+          if(!summary){
+            summary = document.createElement('div');
+            summary.className = 'selection-summary';
+            const after = stepEl.querySelector('.step-info');
+            if(after) after.insertAdjacentElement('afterend', summary);
+            else stepEl.prepend(summary);
+          }
+
+          const sel = selectedMedia[cfg.biasKey];
+          if(sel){
+            summary.innerHTML = `
+              <div class="selection-title">Обраний медіапродукт (${cfg.label})</div>
+              <div class="selection-body">
+                <strong>${sel.title}</strong><br>
+                <span>${sel.description}</span><br>
+                <em>${sel.audience}</em>
+              </div>
+              <div class="selection-actions">
+                <button class="btn btn-secondary" data-goto="${cfg.backStep}">Змінити вибір</button>
+              </div>
+            `;
+          } else {
+            summary.innerHTML = `
+              <div class="selection-title">Медіапродукт ще не обрано</div>
+              <div class="selection-body"><em>Поверніться на попередній крок і зробіть вибір.</em></div>
+              <div class="selection-actions">
+                <button class="btn btn-secondary" data-goto="${cfg.backStep}">Обрати зараз</button>
+              </div>
+            `;
+          }
+
+          const btn = summary.querySelector('button[data-goto]');
+          if(btn){
+            btn.onclick = (e) => {
+              const targetId = e.currentTarget.getAttribute('data-goto');
+              const idx = steps.indexOf(targetId);
+              if(idx !== -1){ currentStepIndex = idx; showStepByIndex(idx); }
+            };
+          }
+        }
+
+        function showStepByIndex(idx){
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            const id = steps[idx];
+            const el = $(id);
+            if(el){ el.classList.add('active'); }
+            updateProgress();
+            renderSelectionSummary(id); // показати нагадування, якщо це аналіз
+            requestAnimationFrame(autosizeFlashcards); // перерахувати висоту карток після зміни кроку
+        }
+
+        function nextStep(){
+            if(currentStepIndex < steps.length - 1){
+                currentStepIndex++;
+                showStepByIndex(currentStepIndex);
+            } else {
+                currentStepIndex = 0;
+                showStepByIndex(currentStepIndex);
+            }
+        }
+
+        function previousStep(){
+            if(currentStepIndex > 0){
+                currentStepIndex--;
+                showStepByIndex(currentStepIndex);
+            }
+        }
+
+        function flipCard(card){
+          card.classList.toggle('flipped');
+          setTimeout(autosizeFlashcards, 620);
+        }
+
+        function selectMedia(cardElement, biasKey){
+            cardElement.parentNode.querySelectorAll('.media-card').forEach(c => c.classList.remove('selected'));
+            cardElement.classList.add('selected');
+            selectedMedia[biasKey] = {
+                title: cardElement.querySelector('h4').textContent,
+                description: cardElement.querySelectorAll('p')[0].textContent,
+                audience: cardElement.querySelectorAll('p')[1].textContent
+            };
+        }
+
+        // pdfMake fonts mapping
+        pdfMake && (pdfMake.fonts = {
+          Roboto: {
+            normal: 'Roboto-Regular.ttf',
+            bold: 'Roboto-Medium.ttf',
+            italics: 'Roboto-Italic.ttf',
+            bolditalics: 'Roboto-MediumItalic.ttf'
+          }
+        });
+
+        function field(id){ return (document.getElementById(id)?.value || '').trim(); }
+
+        function generatePDF(){
+            if(typeof pdfMake === 'undefined'){ alert('Скрипт PDF не завантажився. Переконайтесь, що є інтернет.'); return; }
+            const groupName = (field('groupName') || 'Без назви').trim();
+            const dateStr = new Date().toLocaleDateString('uk-UA');
+
+            const sections = [
+                {name: 'Confirmation Bias (Упередження підтвердження)', id: '1'},
+                {name: 'Anchoring Bias (Ефект прив’язки)', id: '2'},
+                {name: 'Social Proof (Соціальний доказ)', id: '3'},
+                {name: 'Loss Aversion (Уникнення втрат)', id: '4'},
+                {name: 'Availability Heuristic (Евристика доступності)', id: '5'}
+            ];
+
+            const content = [
+                { text: 'Аналіз когнітивних упереджень в медіапромоції', style: 'header' },
+                { text: `Група: ${groupName}`, margin: [0, 8, 0, 0] },
+                { text: `Дата: ${dateStr}`, margin: [0, 0, 0, 12] }
+            ];
+
+            sections.forEach(sec => {
+                const m = field('manifestation'+sec.id);
+                const s = field('strategy'+sec.id);
+                const e = field('example'+sec.id);
+                const body = [];
+                if(m) body.push({ text: 'Прояв у аудиторії:', bold: true }, { text: m, margin: [0,2,0,6] });
+                if(s) body.push({ text: 'Стратегія:', bold: true }, { text: s, margin: [0,2,0,6] });
+                if(e) body.push({ text: 'Приклад:', bold: true }, { text: e, margin: [0,2,0,6] });
+                if(body.length === 0) body.push({ text: '(Аналіз не заповнено)', italics: true });
+
+                content.push({ text: sec.name, style: 'subheader', margin: [0, 10, 0, 4] });
+                content.push(...body);
+            });
+
+            const biasMap = {
+                'confirmation': 'Confirmation Bias (Упередження підтвердження)',
+                'anchoring': 'Anchoring Bias (Ефект прив’язки)',
+                'social': 'Social Proof (Соціальний доказ)',
+                'loss': 'Loss Aversion (Уникнення втрат)',
+                'availability': 'Availability Heuristic (Евристика доступності)'
+            };
+
+            const campaignName = field('campaignName');
+            const chosenBias = field('chosenBias');
+            const tactic1 = field('tactic1');
+            const tactic2 = field('tactic2');
+            const tactic3 = field('tactic3');
+            const mechanism = field('mechanism');
+            const ethics = field('ethics');
+            const results = field('results');
+
+            if(campaignName || chosenBias || tactic1 || tactic2 || tactic3 || mechanism || ethics || results){
+                content.push({ text: 'Детальна стратегія', style: 'subheader', margin: [0, 12, 0, 4] });
+                if(chosenBias) content.push({ text: `Обране упередження: ${biasMap[chosenBias]}` });
+                if(campaignName) content.push({ text: `Назва кампанії: ${campaignName}` });
+                const tactics = [tactic1, tactic2, tactic3].filter(Boolean);
+                if(tactics.length){
+                    content.push({ text: 'Тактики:', bold: true, margin: [0, 6, 0, 2] });
+                    content.push({ ul: tactics });
+                }
+                if(mechanism){ content.push({ text: 'Психологічний механізм:', bold: true, margin: [0, 6, 0, 2] }); content.push({ text: mechanism }); }
+                if(ethics){ content.push({ text: 'Етичні обмеження:', bold: true, margin: [0, 6, 0, 2] }); content.push({ text: ethics }); }
+                if(results){ content.push({ text: 'Очікувані результати:', bold: true, margin: [0, 6, 0, 2] }); content.push({ text: results }); }
+            }
+
+            const docDefinition = {
+                content,
+                defaultStyle: { font: 'Roboto', fontSize: 11, lineHeight: 1.2 },
+                styles: { header: { fontSize: 18, bold: true, margin: [0,0,0,6] }, subheader: { fontSize: 14, bold: true } }
+            };
+
+            const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+            const pdf = pdfMake.createPdf(docDefinition);
+            const fname = `Аналіз_когнітивних_упереджень_${groupName.replace(/\s/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+            if(isIOS){ pdf.open(); } else { pdf.download(fname); }
+        }
+
+        /* === Auto-size flashcards to the tallest face (prevents clipping) === */
+        const FUDGE = 6; // невеликий запас пікселів
+        function sizeOneFlashcard(card){
+          const front = card.querySelector('.front');
+          const back  = card.querySelector('.back');
+          if(!front || !back) return;
+          const tf = front.style.transform, tb = back.style.transform;
+          front.style.transform = 'none';
+          back.style.transform  = 'none';
+          const h = Math.max(160, front.scrollHeight, back.scrollHeight);
+          front.style.transform = tf;
+          back.style.transform  = tb;
+          card.style.height = (h + FUDGE) + 'px';
+        }
+        function autosizeFlashcards(){
+          document.querySelectorAll('.flashcard').forEach(sizeOneFlashcard);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+          showStepByIndex(0);
+          autosizeFlashcards();
+          if (document.fonts && document.fonts.ready) { document.fonts.ready.then(autosizeFlashcards); }
+        });
+        window.addEventListener('resize', autosizeFlashcards);
+        window.addEventListener('orientationchange', autosizeFlashcards);
+    </script>
+</body>
+</html>
